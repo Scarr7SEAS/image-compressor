@@ -150,6 +150,17 @@
   }
 
   function initPWA() {
+    // Bersihkan cache usang versi lama agar update CSS/JS langsung aktif
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        keys.forEach((key) => {
+          if (key !== 'optipic-v2.1') {
+            caches.delete(key);
+          }
+        });
+      });
+    }
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').then((reg) => {
