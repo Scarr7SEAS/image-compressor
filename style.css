@@ -1132,9 +1132,72 @@ input[type="range"]:active::-webkit-slider-thumb {
 
 .btn-card-action {
   flex: 1;
-  padding: 0.55rem;
-  font-size: 0.825rem;
+  padding: 0.55rem 0.4rem;
+  font-size: 0.785rem;
   min-height: 38px;
+  white-space: nowrap;
+}
+
+.btn-card-action svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Aspect Ratio Pills */
+.aspect-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Modal Header Actions */
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Zoomed State for Comparison Container */
+.comparison-container.is-zoomed {
+  cursor: zoom-out;
+}
+
+.comparison-container.is-zoomed .image-wrapper img {
+  transform: scale(2);
+  transform-origin: center center;
+  transition: transform 0.2s ease;
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(16, 185, 129, 0.95);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1100;
+  animation: toastFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-notification svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+@keyframes toastFadeIn {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .btn-icon-danger {

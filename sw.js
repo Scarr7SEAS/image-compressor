@@ -2,7 +2,7 @@
  * OptiPic Service Worker — Offline Support & Asset Caching
  */
 
-const CACHE_NAME = 'optipic-v1.2';
+const CACHE_NAME = 'optipic-v1.3';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,7 @@ const STATIC_ASSETS = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+  './jszip.min.js'
 ];
 
 self.addEventListener('install', (event) => {

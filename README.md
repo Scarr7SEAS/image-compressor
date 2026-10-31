@@ -16,34 +16,30 @@ Aplikasi web modern untuk mengompres, mengubah resolusi, dan mengonversi format 
 3. **Fitur Lengkap & Unggulan:**
    - **Target Ukuran Otomatis (Auto-Fit KB):** Cukup pilih batas ukuran (misal 200 KB untuk CPNS/BUMN), sistem secara otomatis menjalankan algoritma *binary search* untuk mencari kualitas dan skala resolusi yang pas.
    - **Watermark Pengaman Dokumen:** Menambahkan teks cap pengaman diagonal semi-transparan untuk melindungi KTP/SIM dari penyalahgunaan pinjol atau kejahatan identitas.
-   - **Preset Cepat Sekali Klik:** Berkas CPNS 200 KB, KTP & Dokumen Aman, Pas Foto JPEG, Web & SEO 1280px, dan Kualitas Penuh PNG.
+   - **Rotasi Foto 90° Searah Jarum Jam:** Memutar foto miring/terbalik langsung di kartu tanpa perlu upload ulang.
+   - **Pemotong Rasio Aspek (Crop Pas Foto):** Pilihan crop instan 1:1 (Persegi/Avatar), 3:4 (Pas Foto Formal CPNS/Ijazah), 4:6 (Cetak), dan 16:9 (Lanskap).
+   - **Salin ke Papan Klip (Copy to Clipboard):** Menyalin gambar terkompresi langsung ke clipboard untuk ditempel di WhatsApp Web, Telegram, Word, atau email.
+   - **Preset Cepat Sekali Klik:** Berkas CPNS 200 KB, KTP & Dokumen Aman, Pas Foto JPEG 3:4, Web & SEO 1280px, dan Kualitas Penuh PNG.
    - **Pembersih Metadata EXIF Otomatis:** Menghapus koordinat GPS dan info kamera demi privasi total.
-   - **Progressive Web App (PWA) & 100% Offline:** Bisa di-install ke layar utama HP Android/iOS dan dapat dijalankan tanpa koneksi internet sama sekali.
+   - **Progressive Web App (PWA) & 100% Offline:** Dilengkapi file `jszip.min.js` lokal sehingga aplikasi bisa di-install ke layar utama HP Android/iOS dan dapat dijalankan tanpa koneksi internet sama sekali.
    - **Toggle Tema Gelap / Terang:** Mendukung tema dark/light mode dengan deteksi preferensi sistem otomatis.
    - **Konversi Format:** WebP (kompresi modern tertinggi), JPEG, atau PNG.
-   - **Modal Komparasi:** Slider perbandingan Before vs After secara interaktif.
-   - **Download Semua ZIP:** Mengompres dan mengunduh seluruh file sekaligus dalam arsip ZIP via JSZip.
+   - **Modal Komparasi & Zoom 2x:** Slider perbandingan Before vs After interaktif dengan fitur Zoom 2x untuk memeriksa ketajaman detail teks/garis.
+   - **Download Semua ZIP:** Mengompres dan mengunduh seluruh file sekaligus dalam arsip ZIP otomatis via JSZip (dengan proteksi duplikasi nama file).
 
 ---
 
 ## Cara Menjalankan Secara Lokal
 
-Karena project ini murni dibuat menggunakan **HTML, CSS, dan JavaScript vanilla**, tidak diperlukan proses *build* atau instalasi Node.js/Python:
-
 1. Buka folder `image-compressor`.
-2. Klik ganda file `index.html` untuk langsung membukanya di browser (Chrome, Edge, Firefox, atau Safari).
-3. *(Opsional)* Jika ingin menjalankan via local server sederhana:
-   ```bash
-   # Menggunakan Python
-   python -m http.server 8000
-   # Lalu buka di browser: http://localhost:8000
-   ```
+2. **Cara Paling Mudah:** Klik ganda file **`start.bat`**. Browser akan otomatis terbuka di `http://localhost:8000`.
+3. Atau klik ganda langsung file `index.html`.
 
 ---
 
 ## Cara Deploy ke Netlify (Gratis Tanpa Biaya)
 
-Project ini sangat ideal untuk Netlify karena 100% statis:
+Project ini sangat ideal untuk Netlify karena 100% statis dan sudah dilengkapi file `_headers` untuk performa caching optimal:
 
 ### Metode 1: Drag & Drop (Paling Cepat, 1 Menit)
 1. Masuk ke akun [Netlify](https://app.netlify.com/).
@@ -66,7 +62,10 @@ Project ini sangat ideal untuk Netlify karena 100% statis:
 image-compressor/
 ├── index.html        # Struktur HTML5 semantik & SVG ikon vektor
 ├── style.css         # Desain modern (Dark/Light mode) & optimasi mobile Chrome
-├── app.js            # Logika Canvas, binary search target KB, watermark, & JSZip
+├── app.js            # Logika Canvas, binary search target KB, watermark, rotasi, & crop
+├── jszip.min.js      # Library JSZip lokal (100% offline bundle)
+├── _headers          # Konfigurasi caching & security headers Netlify
+├── start.bat         # Peluncur server lokal otomatis sekali klik
 ├── sw.js             # Service Worker untuk dukungan 100% offline
 ├── manifest.json     # Konfigurasi PWA (Web App Manifest)
 ├── icon-192.png      # Ikon aplikasi PWA resolusi 192x192

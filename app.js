@@ -1,7 +1,8 @@
 /**
  * OptiPic — Kompresor & Konverter Gambar Privat
  * 100% Client-Side menggunakan HTML5 Canvas API & JSZip
- * Fitur: PWA Offline, Target Size Optimizer (Binary Search), Watermark Pengaman Dokumen, & Theme Toggle
+ * Fitur: PWA Offline, Target Size Optimizer (Binary Search), Watermark Pengaman Dokumen,
+ *        Rotasi Foto 90°, Pemotong Rasio Aspek (Pas Foto), Salin ke Clipboard, & Modal Zoom
  */
 
 (() => {
@@ -17,6 +18,7 @@
       targetKB: 200,
       customKB: null,
       resolution: 'original',
+      aspectRatio: 'original', // 'original' | '1:1' | '3:4' | '4:6' | '16:9'
       customWidth: null,
       customHeight: null,
       watermark: {
@@ -28,6 +30,7 @@
       theme: 'dark',
     },
     activeModalItem: null,
+    modalZoom: 1,
     deferredInstallPrompt: null,
   };
 
@@ -56,6 +59,9 @@
   const customResWrapper = document.getElementById('customResWrapper');
   const customWidthInput = document.getElementById('customWidth');
   const customHeightInput = document.getElementById('customHeight');
+
+  const aspectPills = document.getElementById('aspectPills');
+  const aspectBadge = document.getElementById('aspectBadge');
 
   const watermarkAccordionToggle = document.getElementById('watermarkAccordionToggle');
   const watermarkContent = document.getElementById('watermarkContent');
@@ -92,6 +98,7 @@
   const compareModal = document.getElementById('compareModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const modalDismissBtn = document.getElementById('modalDismissBtn');
+  const modalCopyBtn = document.getElementById('modalCopyBtn');
   const modalDownloadBtn = document.getElementById('modalDownloadBtn');
   const modalFilename = document.getElementById('modalFilename');
   const modalImgBefore = document.getElementById('modalImgBefore');
@@ -101,6 +108,24 @@
   const compareSlider = document.getElementById('compareSlider');
   const beforeWrapper = document.getElementById('beforeWrapper');
   const sliderDivider = document.getElementById('sliderDivider');
+  const modalZoomBtn = document.getElementById('modalZoomBtn');
+  const modalZoomText = document.getElementById('modalZoomText');
+
+  // Toast
+  const toastNotification = document.getElementById('toastNotification');
+  const toastMsg = document.getElementById('toastMsg');
+
+  // --- TOAST HELPER ---
+  let toastTimer = null;
+  function showToast(message) {
+    if (!toastNotification || !toastMsg) return;
+    toastMsg.textContent = message;
+    toastNotification.style.display = 'flex';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastNotification.style.display = 'none';
+    }, 2800);
+  }
 
   // --- INITIALIZATION (THEME & PWA) ---
   function initTheme() {
@@ -180,25 +205,57 @@
     return state.settings.format;
   }
 
+  // --- ASPECT RATIO CROPPING CALCULATION ---
+  function calculateCropBox(srcW, srcH, aspectSetting) {
+    if (!aspectSetting || aspectSetting === 'original') {
+      return { sx: 0, sy: 0, sw: srcW, sh: srcH };
+    }
+    const ratioMap = {
+      '1:1': 1.0,
+      '3:4': 3 / 4,
+      '4:6': 4 / 6,
+      '16:9': 16 / 9,
+    };
+    const targetRatio = ratioMap[aspectSetting];
+    if (!targetRatio) return { sx: 0, sy: 0, sw: srcW, sh: srcH };
+
+    const srcRatio = srcW / srcH;
+    let sw = srcW;
+    let sh = srcH;
+    let sx = 0;
+    let sy = 0;
+
+    if (srcRatio > targetRatio) {
+      sw = Math.round(srcH * targetRatio);
+      sx = Math.round((srcW - sw) / 2);
+    } else {
+      sh = Math.round(srcW / targetRatio);
+      sy = Math.round((srcH - sh) / 2);
+    }
+
+    return { sx, sy, sw, sh };
+  }
+
   function calculateTargetDimensions(srcWidth, srcHeight, extraScale = 1.0) {
-    const { resolution, customWidth, customHeight } = state.settings;
-    let baseW = srcWidth;
-    let baseH = srcHeight;
+    const { resolution, customWidth, customHeight, aspectRatio } = state.settings;
+    const cropBox = calculateCropBox(srcWidth, srcHeight, aspectRatio);
+    let baseW = cropBox.sw;
+    let baseH = cropBox.sh;
 
     if (resolution === 'custom') {
-      const maxW = customWidth || srcWidth;
-      const maxH = customHeight || srcHeight;
-      const scale = Math.min(maxW / srcWidth, maxH / srcHeight, 1);
-      baseW = Math.max(1, Math.round(srcWidth * scale));
-      baseH = Math.max(1, Math.round(srcHeight * scale));
+      const maxW = customWidth || baseW;
+      const maxH = customHeight || baseH;
+      const scale = Math.min(maxW / baseW, maxH / baseH, 1);
+      baseW = Math.max(1, Math.round(baseW * scale));
+      baseH = Math.max(1, Math.round(baseH * scale));
     } else if (resolution !== 'original') {
       const maxLimit = parseInt(resolution, 10);
-      if (maxLimit && (srcWidth > maxLimit || srcHeight > maxLimit)) {
-        if (srcWidth >= srcHeight) {
+      if (maxLimit && (baseW > maxLimit || baseH > maxLimit)) {
+        if (baseW >= baseH) {
           baseW = maxLimit;
-          baseH = Math.max(1, Math.round((srcHeight * maxLimit) / srcWidth));
+          baseH = Math.max(1, Math.round((cropBox.sh * maxLimit) / cropBox.sw));
         } else {
-          baseW = Math.max(1, Math.round((srcWidth * maxLimit) / srcHeight));
+          baseW = Math.max(1, Math.round((cropBox.sw * maxLimit) / cropBox.sh));
           baseH = maxLimit;
         }
       }
@@ -208,10 +265,40 @@
       return {
         width: Math.max(1, Math.round(baseW * extraScale)),
         height: Math.max(1, Math.round(baseH * extraScale)),
+        cropBox,
       };
     }
 
-    return { width: baseW, height: baseH };
+    return { width: baseW, height: baseH, cropBox };
+  }
+
+  // --- DRAWING WITH ROTATION & CROP ON CANVAS ---
+  function drawImageTransformed(ctx, img, targetDims, rotation = 0) {
+    const { width: W, height: H, cropBox } = targetDims;
+    const isRotated90 = rotation === 90 || rotation === 270;
+    const canvasW = isRotated90 ? H : W;
+    const canvasH = isRotated90 ? W : H;
+
+    ctx.save();
+    ctx.translate(canvasW / 2, canvasH / 2);
+    if (rotation !== 0) {
+      ctx.rotate((rotation * Math.PI) / 180);
+    }
+
+    ctx.drawImage(
+      img,
+      cropBox.sx,
+      cropBox.sy,
+      cropBox.sw,
+      cropBox.sh,
+      -W / 2,
+      -H / 2,
+      W,
+      H
+    );
+    ctx.restore();
+
+    return { canvasW, canvasH };
   }
 
   // --- WATERMARK DRAWING (Canvas) ---
@@ -266,16 +353,20 @@
   }
 
   // --- TARGET SIZE OPTIMIZER (Binary Search Quality & Downscaling) ---
-  async function optimizeToTargetSize(img, targetBytes, targetMime) {
+  async function optimizeToTargetSize(img, targetBytes, targetMime, rotation = 0) {
     let extraScale = 1.0;
     let bestBlob = null;
     let bestDims = { width: 0, height: 0 };
 
     for (let scaleAttempt = 0; scaleAttempt < 3; scaleAttempt++) {
-      const dims = calculateTargetDimensions(img.naturalWidth, img.naturalHeight, extraScale);
+      const targetDims = calculateTargetDimensions(img.naturalWidth, img.naturalHeight, extraScale);
+      const isRotated90 = rotation === 90 || rotation === 270;
+      const cW = isRotated90 ? targetDims.height : targetDims.width;
+      const cH = isRotated90 ? targetDims.width : targetDims.height;
+
       const canvas = document.createElement('canvas');
-      canvas.width = dims.width;
-      canvas.height = dims.height;
+      canvas.width = cW;
+      canvas.height = cH;
       const ctx = canvas.getContext('2d', { willReadFrequently: false });
 
       if (targetMime === 'image/jpeg') {
@@ -285,21 +376,39 @@
 
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, dims.width, dims.height);
-      drawWatermark(ctx, dims.width, dims.height);
+      drawImageTransformed(ctx, img, targetDims, rotation);
+      drawWatermark(ctx, canvas.width, canvas.height);
 
       if (targetMime === 'image/png') {
         const blob = await canvasToBlobAsync(canvas, targetMime);
         if (blob && (blob.size <= targetBytes || scaleAttempt === 2)) {
-          return { blob, width: dims.width, height: dims.height };
+          return { blob, width: cW, height: cH };
         }
         extraScale *= 0.75;
         continue;
       }
 
+      // Fast check: If high quality (0.95) already fits target, return immediately
+      const highBlob = await canvasToBlobAsync(canvas, targetMime, 0.95);
+      if (highBlob && highBlob.size <= targetBytes) {
+        return { blob: highBlob, width: cW, height: cH };
+      }
+
+      // Fast check: If minimum quality (0.05) is still too big, downscale right away
+      const lowBlob = await canvasToBlobAsync(canvas, targetMime, 0.05);
+      if (lowBlob && lowBlob.size > targetBytes) {
+        if (!bestBlob || lowBlob.size < bestBlob.size) {
+          bestBlob = lowBlob;
+          bestDims = { width: cW, height: cH };
+        }
+        extraScale *= 0.75;
+        continue;
+      }
+
+      // Binary search between 0.05 and 0.95
       let lowQ = 0.05;
       let highQ = 0.95;
-      let optimalBlob = null;
+      let optimalBlob = lowBlob;
 
       for (let iter = 0; iter < 5; iter++) {
         const midQ = (lowQ + highQ) / 2;
@@ -316,13 +425,7 @@
       }
 
       if (optimalBlob) {
-        return { blob: optimalBlob, width: dims.width, height: dims.height };
-      }
-
-      const minBlob = await canvasToBlobAsync(canvas, targetMime, 0.05);
-      if (!bestBlob || (minBlob && minBlob.size < bestBlob.size)) {
-        bestBlob = minBlob;
-        bestDims = dims;
+        return { blob: optimalBlob, width: cW, height: cH };
       }
 
       extraScale *= 0.75;
@@ -343,11 +446,13 @@
         item.targetMime = targetMime;
         item.targetExt = getExtensionForMime(targetMime, item.file.name);
 
+        const rotation = item.rotation || 0;
+
         try {
           if (state.settings.mode === 'target_size') {
             const effectiveKb = state.settings.customKB || state.settings.targetKB;
             const targetBytes = effectiveKb * 1024;
-            const result = await optimizeToTargetSize(img, targetBytes, targetMime);
+            const result = await optimizeToTargetSize(img, targetBytes, targetMime, rotation);
 
             if (!result.blob) {
               throw new Error('Gagal mengoptimasi gambar ke target ukuran.');
@@ -364,12 +469,16 @@
             resolve(item);
           } else {
             const targetDims = calculateTargetDimensions(img.naturalWidth, img.naturalHeight);
-            item.compressedWidth = targetDims.width;
-            item.compressedHeight = targetDims.height;
+            const isRotated90 = rotation === 90 || rotation === 270;
+            const cW = isRotated90 ? targetDims.height : targetDims.width;
+            const cH = isRotated90 ? targetDims.width : targetDims.height;
+
+            item.compressedWidth = cW;
+            item.compressedHeight = cH;
 
             const canvas = document.createElement('canvas');
-            canvas.width = targetDims.width;
-            canvas.height = targetDims.height;
+            canvas.width = cW;
+            canvas.height = cH;
             const ctx = canvas.getContext('2d', { willReadFrequently: false });
 
             if (targetMime === 'image/jpeg') {
@@ -379,8 +488,8 @@
 
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, targetDims.width, targetDims.height);
-            drawWatermark(ctx, targetDims.width, targetDims.height);
+            drawImageTransformed(ctx, img, targetDims, rotation);
+            drawWatermark(ctx, canvas.width, canvas.height);
 
             const blob = await canvasToBlobAsync(canvas, targetMime, state.settings.quality);
             if (!blob) throw new Error('Gagal memproses kanvas gambar.');
@@ -426,6 +535,7 @@
       originalUrl: URL.createObjectURL(file),
       originalWidth: 0,
       originalHeight: 0,
+      rotation: 0,
       compressedBlob: null,
       compressedUrl: null,
       compressedSize: 0,
@@ -530,7 +640,13 @@
           </div>
         </div>
         <div class="card-actions">
-          <button type="button" class="btn btn-outline btn-card-action" id="compareBtn-${item.id}">
+          <button type="button" class="btn btn-outline btn-card-action" id="rotateBtn-${item.id}" title="Putar 90 derajat searah jarum jam">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>Putar 90°</span>
+          </button>
+          <button type="button" class="btn btn-outline btn-card-action" id="compareBtn-${item.id}" title="Bandingkan sebelum dan sesudah">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -539,7 +655,7 @@
             </svg>
             <span>Bandingkan</span>
           </button>
-          <button type="button" class="btn btn-primary btn-card-action" id="downloadBtn-${item.id}">
+          <button type="button" class="btn btn-primary btn-card-action" id="downloadBtn-${item.id}" title="Download gambar ini">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
@@ -557,6 +673,7 @@
       </div>
     `;
 
+    card.querySelector(`#rotateBtn-${item.id}`).addEventListener('click', () => rotateSingleItem(item));
     card.querySelector(`#compareBtn-${item.id}`).addEventListener('click', () => openCompareModal(item));
     card.querySelector(`#downloadBtn-${item.id}`).addEventListener('click', () => downloadSingleItem(item));
     card.querySelector(`#deleteBtn-${item.id}`).addEventListener('click', () => deleteSingleItem(item.id));
@@ -587,7 +704,8 @@
     const fmtClean = item.targetExt ? item.targetExt.replace('.', '').toUpperCase() : 'IMG';
     formatTag.textContent = fmtClean;
 
-    dims.textContent = `${item.originalWidth}x${item.originalHeight} px → ${item.compressedWidth}x${item.compressedHeight} px`;
+    const rotText = item.rotation ? ` (${item.rotation}°)` : '';
+    dims.textContent = `${item.originalWidth}x${item.originalHeight} px → ${item.compressedWidth}x${item.compressedHeight} px${rotText}`;
     newSize.textContent = formatBytes(item.compressedSize);
 
     const diff = item.originalSize - item.compressedSize;
@@ -628,6 +746,25 @@
   }
 
   // --- ACTIONS ---
+  async function rotateSingleItem(item) {
+    item.rotation = ((item.rotation || 0) + 90) % 360;
+    item.isProcessing = true;
+    updateCardUI(item);
+
+    try {
+      await compressImage(item);
+      showToast(`Foto diputar ke ${item.rotation}°`);
+    } catch (err) {
+      console.error('Gagal memutar foto:', err);
+    }
+    updateCardUI(item);
+    updateSummaryUI();
+
+    if (state.activeModalItem && state.activeModalItem.id === item.id) {
+      openCompareModal(item);
+    }
+  }
+
   function deleteSingleItem(id) {
     const idx = state.items.findIndex((item) => item.id === id);
     if (idx !== -1) {
@@ -673,6 +810,46 @@
     document.body.removeChild(link);
   }
 
+  async function copyImageToClipboard(item) {
+    if (!item || !item.compressedBlob) {
+      showToast('Gambar belum siap disalin');
+      return;
+    }
+
+    try {
+      if (item.compressedBlob.type === 'image/png') {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': item.compressedBlob }),
+        ]);
+        showToast('Gambar berhasil disalin ke papan klip!');
+      } else {
+        // Convert to PNG blob for universal clipboard compatibility
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          c.toBlob(async (pngBlob) => {
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': pngBlob }),
+              ]);
+              showToast('Gambar berhasil disalin ke papan klip!');
+            } catch (e) {
+              showToast('Izin papan klip ditolak oleh browser');
+            }
+          }, 'image/png');
+        };
+        img.src = item.compressedUrl;
+      }
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+      showToast('Gagal menyalin gambar');
+    }
+  }
+
   async function downloadAllAsZip() {
     const readyItems = state.items.filter((item) => item.compressedBlob);
     if (readyItems.length === 0) {
@@ -691,8 +868,16 @@
         downloadAllBtn.disabled = true;
 
         const zip = new JSZip();
-        readyItems.forEach((item) => {
-          const filename = getDownloadFilename(item);
+        const usedNames = new Set();
+
+        readyItems.forEach((item, index) => {
+          let filename = getDownloadFilename(item);
+          if (usedNames.has(filename)) {
+            const base = filename.replace(/\.[^/.]+$/, '');
+            const ext = filename.match(/\.[^/.]+$/)?.[0] || '';
+            filename = `${base}-${index + 1}${ext}`;
+          }
+          usedNames.add(filename);
           zip.file(filename, item.compressedBlob);
         });
 
@@ -736,8 +921,14 @@
     modalImgBefore.src = item.originalUrl;
     modalImgAfter.src = item.compressedUrl;
 
+    const rotText = item.rotation ? ` • ${item.rotation}°` : '';
     modalOriginalMeta.textContent = `${formatBytes(item.originalSize)} (${item.originalWidth}x${item.originalHeight}px)`;
-    modalCompressedMeta.textContent = `${formatBytes(item.compressedSize)} (${item.compressedWidth}x${item.compressedHeight}px)`;
+    modalCompressedMeta.textContent = `${formatBytes(item.compressedSize)} (${item.compressedWidth}x${item.compressedHeight}px${rotText})`;
+
+    // Reset zoom
+    state.modalZoom = 1;
+    document.getElementById('comparisonContainer').classList.remove('is-zoomed');
+    if (modalZoomText) modalZoomText.textContent = 'Zoom 2x';
 
     compareSlider.value = 50;
     updateComparisonSplit(50);
@@ -750,6 +941,18 @@
     compareModal.style.display = 'none';
     document.body.style.overflow = '';
     state.activeModalItem = null;
+  }
+
+  function toggleModalZoom() {
+    const container = document.getElementById('comparisonContainer');
+    state.modalZoom = state.modalZoom === 1 ? 2 : 1;
+    if (state.modalZoom === 2) {
+      container.classList.add('is-zoomed');
+      modalZoomText.textContent = 'Zoom 1x';
+    } else {
+      container.classList.remove('is-zoomed');
+      modalZoomText.textContent = 'Zoom 2x';
+    }
   }
 
   function updateComparisonSplit(val) {
@@ -772,6 +975,7 @@
         qualityValue.textContent = '80%';
         state.settings.quality = 0.8;
         setResolution('original');
+        setAspectRatio('original');
         setWatermarkEnabled(false);
         break;
 
@@ -781,6 +985,7 @@
         setMode('target_size');
         setTargetKB(200);
         setResolution('1920');
+        setAspectRatio('original');
         setWatermarkEnabled(false);
         break;
 
@@ -790,6 +995,7 @@
         setMode('target_size');
         setTargetKB(300);
         setResolution('original');
+        setAspectRatio('original');
         setWatermarkEnabled(true);
         break;
 
@@ -801,6 +1007,7 @@
         qualityValue.textContent = '85%';
         state.settings.quality = 0.85;
         setResolution('1280');
+        setAspectRatio('3:4'); // Otomatis pas foto formal 3:4!
         setWatermarkEnabled(false);
         break;
 
@@ -812,6 +1019,7 @@
         qualityValue.textContent = '75%';
         state.settings.quality = 0.75;
         setResolution('1280');
+        setAspectRatio('original');
         setWatermarkEnabled(false);
         break;
 
@@ -823,6 +1031,7 @@
         qualityValue.textContent = '100%';
         state.settings.quality = 1.0;
         setResolution('original');
+        setAspectRatio('original');
         setWatermarkEnabled(false);
         break;
     }
@@ -863,6 +1072,23 @@
     customResWrapper.style.display = res === 'custom' ? 'block' : 'none';
   }
 
+  function setAspectRatio(aspect) {
+    state.settings.aspectRatio = aspect;
+    if (aspectPills) {
+      aspectPills.querySelectorAll('.pill').forEach((p) => {
+        p.classList.toggle('active', p.dataset.aspect === aspect);
+      });
+    }
+    const labelMap = {
+      original: 'Ukuran Asli (Tanpa Crop)',
+      '1:1': '1:1 Persegi (Profil)',
+      '3:4': '3:4 Pas Foto Formal',
+      '4:6': '4:6 Pas Foto Cetak',
+      '16:9': '16:9 Layar Lebar',
+    };
+    if (aspectBadge) aspectBadge.textContent = labelMap[aspect] || aspect;
+  }
+
   function setWatermarkEnabled(enabled) {
     state.settings.watermark.enabled = enabled;
     watermarkToggle.checked = enabled;
@@ -878,20 +1104,17 @@
 
   // --- ATTACH EVENT LISTENERS ---
 
-  // Theme Toggle
   themeToggleBtn.addEventListener('click', () => {
     const nextTheme = state.settings.theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
   });
 
-  // Preset Chips
   quickPresetsContainer.addEventListener('click', (e) => {
     const chip = e.target.closest('.preset-chip');
     if (!chip) return;
     applyPreset(chip.dataset.preset);
   });
 
-  // Mode Switch Tabs
   tabModeQuality.addEventListener('click', () => {
     setMode('quality');
     triggerReprocessAll();
@@ -902,7 +1125,6 @@
     triggerReprocessAll();
   });
 
-  // Target Size Presets
   targetSizePresets.addEventListener('click', (e) => {
     const btn = e.target.closest('.chip-sm');
     if (!btn) return;
@@ -928,14 +1150,26 @@
     }
   });
 
-  customKbInput.addEventListener('change', () => {
+  function handleCustomKbInput() {
     const val = parseInt(customKbInput.value, 10);
     if (val && val >= 10) {
       state.settings.customKB = val;
       targetSizeBadge.textContent = `Maks ${val} KB`;
       triggerReprocessAll();
     }
-  });
+  }
+  customKbInput.addEventListener('change', handleCustomKbInput);
+  customKbInput.addEventListener('input', handleCustomKbInput);
+
+  // Aspect Ratio Pills
+  if (aspectPills) {
+    aspectPills.addEventListener('click', (e) => {
+      const pill = e.target.closest('.pill');
+      if (!pill) return;
+      setAspectRatio(pill.dataset.aspect);
+      triggerReprocessAll();
+    });
+  }
 
   // Watermark Accordion & Inputs
   watermarkAccordionToggle.addEventListener('click', () => {
@@ -1063,14 +1297,16 @@
   });
 
   // Custom Resolution Inputs
+  function handleCustomResInput() {
+    state.settings.customWidth = parseInt(customWidthInput.value, 10) || null;
+    state.settings.customHeight = parseInt(customHeightInput.value, 10) || null;
+    if (state.settings.resolution === 'custom') {
+      triggerReprocessAll();
+    }
+  }
   [customWidthInput, customHeightInput].forEach((input) => {
-    input.addEventListener('change', () => {
-      state.settings.customWidth = parseInt(customWidthInput.value, 10) || null;
-      state.settings.customHeight = parseInt(customHeightInput.value, 10) || null;
-      if (state.settings.resolution === 'custom') {
-        triggerReprocessAll();
-      }
-    });
+    input.addEventListener('change', handleCustomResInput);
+    input.addEventListener('input', handleCustomResInput);
   });
 
   // Global Actions
@@ -1084,6 +1320,18 @@
   compareModal.addEventListener('click', (e) => {
     if (e.target === compareModal) closeCompareModal();
   });
+
+  if (modalZoomBtn) {
+    modalZoomBtn.addEventListener('click', toggleModalZoom);
+  }
+
+  if (modalCopyBtn) {
+    modalCopyBtn.addEventListener('click', () => {
+      if (state.activeModalItem) {
+        copyImageToClipboard(state.activeModalItem);
+      }
+    });
+  }
 
   modalDownloadBtn.addEventListener('click', () => {
     if (state.activeModalItem) {
