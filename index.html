@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="description" content="Kompres, ubah resolusi, dan beri watermark pengaman dokumen langsung di browser tanpa upload ke server. Cepat, aman, dan 100% offline.">
+  <title>OptiPic — Kompresor & Konverter Gambar Privat</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <!-- JSZip untuk fitur Download Semua ZIP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+            <path d="m8 17 4-4 4 4"></path>
+            <path d="M12 13v9"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>OptiPic</h1>
+          <p>Kompresor & Konverter Gambar Privat</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Install PWA Button (Tampil jika didukung browser) -->
+        <button type="button" class="btn btn-outline btn-sm" id="installPwaBtn" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Install Aplikasi</span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="Ganti Tema" title="Ganti Tema Terang atau Gelap">
+          <svg id="themeIconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg id="themeIconLight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+
+        <!-- Privacy Badge -->
+        <div class="privacy-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
+          <span>100% Client-Side</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Section: Preset Cepat -->
+      <section class="quick-presets-bar">
+        <span class="presets-label">Preset Cepat:</span>
+        <div class="presets-scroll" id="quickPresetsContainer">
+          <button type="button" class="preset-chip active" data-preset="general">WebP Seimbang</button>
+          <button type="button" class="preset-chip" data-preset="cpns">Berkas CPNS 200 KB</button>
+          <button type="button" class="preset-chip" data-preset="ktp">KTP & Dokumen Aman</button>
+          <button type="button" class="preset-chip" data-preset="pasfoto">Pas Foto JPEG</button>
+          <button type="button" class="preset-chip" data-preset="seo">Web & SEO 1280px</button>
+          <button type="button" class="preset-chip" data-preset="lossless">Kualitas Penuh PNG</button>
+        </div>
+      </section>
+
+      <!-- Section: Panel Pengaturan Kompresi -->
+      <section class="settings-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            <h2>Pengaturan Kompresi</h2>
+          </div>
+
+          <!-- Mode Switcher Tabs -->
+          <div class="mode-tabs">
+            <button type="button" class="mode-tab active" id="tabModeQuality">Mode Kualitas</button>
+            <button type="button" class="mode-tab" id="tabModeTargetSize">Target Ukuran KB</button>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Format Target -->
+          <div class="setting-item">
+            <label for="formatSelect" class="setting-label">Format Output</label>
+            <div class="select-wrapper">
+              <select id="formatSelect">
+                <option value="original">Format Asli</option>
+                <option value="image/webp" selected>WebP — Ukuran Paling Ringan</option>
+                <option value="image/jpeg">JPEG — Standar Kompatibilitas</option>
+                <option value="image/png">PNG — Kualitas Lossless</option>
+              </select>
+              <svg class="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <p class="setting-hint">WebP menghasilkan ukuran 30% hingga 80% lebih kecil dibanding JPEG tanpa mengurangi ketajaman mata.</p>
+          </div>
+
+          <!-- Opsi Kualitas Manual (Tampil jika tab Mode Kualitas aktif) -->
+          <div class="setting-item" id="qualityControlWrapper">
+            <div class="slider-header">
+              <label for="qualitySlider" class="setting-label">Kualitas Kompresi</label>
+              <span id="qualityValue" class="slider-badge">80%</span>
+            </div>
+            <div class="range-wrapper">
+              <input type="range" id="qualitySlider" min="5" max="100" value="80" step="1">
+            </div>
+            <div class="range-labels">
+              <span>Maksimal Kompresi 5%</span>
+              <span>Seimbang 80%</span>
+              <span>Kualitas Penuh 100%</span>
+            </div>
+          </div>
+
+          <!-- Opsi Target Ukuran KB (Tampil jika tab Target Ukuran aktif) -->
+          <div class="setting-item" id="targetSizeControlWrapper" style="display: none;">
+            <div class="slider-header">
+              <label class="setting-label">Target Batas Ukuran</label>
+              <span id="targetSizeBadge" class="slider-badge">Maks 200 KB</span>
+            </div>
+            <div class="target-size-presets" id="targetSizePresets">
+              <button type="button" class="chip-sm" data-kb="100">100 KB</button>
+              <button type="button" class="chip-sm active" data-kb="200">200 KB</button>
+              <button type="button" class="chip-sm" data-kb="300">300 KB</button>
+              <button type="button" class="chip-sm" data-kb="500">500 KB</button>
+              <button type="button" class="chip-sm" data-kb="1024">1 MB</button>
+              <button type="button" class="chip-sm" data-kb="custom">Kustom</button>
+            </div>
+            <div class="custom-kb-input" id="customKbWrapper" style="display: none;">
+              <div class="input-unit">
+                <input type="number" id="customKbInput" placeholder="Misal: 250" min="10" max="50000">
+                <span>KB</span>
+              </div>
+            </div>
+            <p class="setting-hint">Algoritma otomatis mencari titik kualitas & resolusi agar ukuran file tidak melebihi batas ini.</p>
+          </div>
+
+          <!-- Pilihan Resolusi Maksimal -->
+          <div class="setting-item full-width">
+            <label class="setting-label">Batasan Resolusi Maksimal</label>
+            <div class="resolution-pills" id="resolutionPills">
+              <button type="button" class="pill active" data-res="original">Ukuran Asli</button>
+              <button type="button" class="pill" data-res="1920">Full HD 1920px</button>
+              <button type="button" class="pill" data-res="1280">HD 1280px</button>
+              <button type="button" class="pill" data-res="800">Web 800px</button>
+              <button type="button" class="pill" data-res="custom">Kustom</button>
+            </div>
+
+            <!-- Custom Resolution Input (Hidden by default) -->
+            <div class="custom-res-wrapper" id="customResWrapper" style="display: none;">
+              <div class="custom-res-inputs">
+                <div class="input-field">
+                  <label for="customWidth">Lebar Maksimal</label>
+                  <div class="input-unit">
+                    <input type="number" id="customWidth" placeholder="Misal: 1080" min="50" max="10000">
+                    <span>px</span>
+                  </div>
+                </div>
+                <div class="input-field">
+                  <label for="customHeight">Tinggi Maksimal</label>
+                  <div class="input-unit">
+                    <input type="number" id="customHeight" placeholder="Misal: 1080" min="50" max="10000">
+                    <span>px</span>
+                  </div>
+                </div>
+              </div>
+              <p class="setting-hint">Rasio aspek foto akan selalu dijaga otomatis agar tidak gepeng atau terdistorsi.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Fitur Keamanan Dokumen & Watermark -->
+        <div class="extra-options-accordion">
+          <div class="accordion-toggle" id="watermarkAccordionToggle">
+            <div class="accordion-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span>Watermark Pengaman Dokumen</span>
+            </div>
+            <div class="accordion-right">
+              <label class="switch" onclick="event.stopPropagation()">
+                <input type="checkbox" id="watermarkToggle">
+                <span class="switch-slider"></span>
+              </label>
+              <svg class="chevron-icon" id="watermarkChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="accordion-content" id="watermarkContent" style="display: none;">
+            <div class="watermark-grid">
+              <div class="input-field full-width">
+                <label for="watermarkTextInput">Teks Watermark</label>
+                <input type="text" id="watermarkTextInput" class="styled-text-input" value="HANYA UNTUK VERIFIKASI DOKUMEN" placeholder="Contoh: HANYA UNTUK VERIFIKASI CPNS 2026">
+              </div>
+
+              <div class="input-field">
+                <div class="slider-header">
+                  <label for="watermarkOpacitySlider">Transparansi Watermark</label>
+                  <span id="watermarkOpacityValue" class="slider-badge">25%</span>
+                </div>
+                <div class="range-wrapper">
+                  <input type="range" id="watermarkOpacitySlider" min="10" max="80" value="25" step="5">
+                </div>
+              </div>
+
+              <div class="input-field">
+                <label for="watermarkColorSelect">Warna Teks</label>
+                <div class="select-wrapper">
+                  <select id="watermarkColorSelect">
+                    <option value="white" selected>Putih dengan Kontur Halus</option>
+                    <option value="black">Hitam Tegas</option>
+                    <option value="red">Merah Tanda Khusus</option>
+                  </select>
+                  <svg class="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <p class="setting-hint">Teks watermark akan dicetak secara diagonal melintang di atas foto untuk mencegah penyalahgunaan identitas.</p>
+          </div>
+        </div>
+
+        <!-- Privacy & EXIF Stripping Notice Bar -->
+        <div class="exif-notice-bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <polyline points="9 11 12 14 22 4"></polyline>
+          </svg>
+          <span>Pembersih Privasi Otomatis: Seluruh metadata EXIF, info model kamera, dan koordinat GPS lokasi langsung dibersihkan.</span>
+        </div>
+      </section>
+
+      <!-- Section: Area Upload / Dropzone -->
+      <section class="upload-section">
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp,image/avif,image/bmp,image/gif" class="file-input-hidden">
+          
+          <div class="dropzone-content">
+            <div class="dropzone-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+            </div>
+            <h3>Pilih Gambar atau Seret ke Sini</h3>
+            <p class="dropzone-sub">Mendukung banyak file sekaligus: JPG, PNG, WebP, AVIF, BMP</p>
+            
+            <div class="dropzone-actions">
+              <button type="button" class="btn btn-primary" id="browseBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Pilih dari Perangkat</span>
+              </button>
+            </div>
+            
+            <div class="dropzone-footer">
+              <span class="tip-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                Tips: Bisa langsung paste tangkapan layar dengan Ctrl+V
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Status & Ringkasan -->
+      <section class="summary-card" id="summaryCard" style="display: none;">
+        <div class="summary-stats">
+          <div class="stat-box">
+            <span class="stat-label">Total File</span>
+            <span class="stat-value" id="statTotalFiles">0</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-box">
+            <span class="stat-label">Ukuran Awal</span>
+            <span class="stat-value" id="statOriginalSize">0 KB</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-box">
+            <span class="stat-label">Ukuran Akhir</span>
+            <span class="stat-value highlight" id="statCompressedSize">0 KB</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-box">
+            <span class="stat-label">Total Penghematan</span>
+            <span class="stat-value savings" id="statSavings">0%</span>
+          </div>
+        </div>
+
+        <div class="summary-actions">
+          <button type="button" class="btn btn-outline" id="clearAllBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>Hapus Semua</span>
+          </button>
+          <button type="button" class="btn btn-success" id="downloadAllBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span id="downloadAllText">Download Semua (ZIP)</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Section: Galeri Hasil Kompresi -->
+      <section class="results-section" id="resultsSection" style="display: none;">
+        <div class="section-title-bar">
+          <h3>Hasil Kompresi</h3>
+          <span class="badge-count" id="badgeCount">0 File</span>
+        </div>
+        <div class="cards-grid" id="cardsGrid">
+          <!-- Card items dynamically injected here -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal Perbandingan (Before / After Comparison) -->
+    <div class="modal-overlay" id="compareModal" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+            <h3 id="modalFilename">Nama File</h3>
+          </div>
+          <button type="button" class="btn-close" id="closeModalBtn" aria-label="Tutup">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="comparison-container" id="comparisonContainer">
+            <div class="image-wrapper after-wrapper">
+              <img id="modalImgAfter" alt="Gambar Sesudah">
+              <span class="label-badge after-label">Sesudah</span>
+            </div>
+            <div class="image-wrapper before-wrapper" id="beforeWrapper">
+              <img id="modalImgBefore" alt="Gambar Sebelum">
+              <span class="label-badge before-label">Sebelum</span>
+            </div>
+            <input type="range" min="0" max="100" value="50" class="compare-slider" id="compareSlider" aria-label="Geser untuk membandingkan">
+            <div class="slider-divider" id="sliderDivider">
+              <div class="divider-handle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-info-bar">
+            <div class="info-group">
+              <span class="info-title">Sebelum:</span>
+              <span id="modalOriginalMeta">-</span>
+            </div>
+            <div class="info-group">
+              <span class="info-title">Sesudah:</span>
+              <span id="modalCompressedMeta">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="modalDismissBtn">Tutup</button>
+          <button type="button" class="btn btn-primary" id="modalDownloadBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download Gambar Ini</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Floating Action Bar (Khusus Layar HP saat ada file) -->
+    <div class="mobile-sticky-bar" id="mobileStickyBar">
+      <div class="mobile-sticky-info">
+        <span id="mobileCount">0 File</span>
+        <span class="mobile-savings" id="mobileSavings">Hemat 0%</span>
+      </div>
+      <button type="button" class="btn btn-success btn-mobile-dl" id="mobileDownloadAllBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Download Semua</span>
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <p><strong>OptiPic</strong> — Seluruh kompresi gambar dan pembubuhan watermark diproses langsung di perangkat Anda via Canvas. Bebas pelacak dan tanpa server.</p>
+        <p class="footer-sub">Mendukung Progressive Web App untuk penggunaan 100% offline di Android Chrome, iOS Safari, dan Desktop.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
