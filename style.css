@@ -33,6 +33,11 @@
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.45);
 
+  --dropzone-bg: rgba(24, 34, 53, 0.4);
+  --dropzone-border: #334155;
+  --dropzone-hover-bg: rgba(16, 185, 129, 0.08);
+  --dropzone-hover-border: var(--accent-emerald);
+
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --bg-gradient: radial-gradient(circle at 50% 0%, #172554 0%, #0b0f19 65%);
@@ -58,6 +63,11 @@
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.12);
   --bg-gradient: radial-gradient(circle at 50% 0%, #e0f2fe 0%, #f8fafc 65%);
+
+  --dropzone-bg: #ffffff;
+  --dropzone-border: #cbd5e1;
+  --dropzone-hover-bg: #e2e8f0;
+  --dropzone-hover-border: var(--accent-emerald);
 }
 
 /* Reset & Base */
@@ -735,9 +745,9 @@ input[type="range"]:active::-webkit-slider-thumb {
 
 .dropzone {
   position: relative;
-  border: 2px dashed #334155;
+  border: 2px dashed var(--dropzone-border);
   border-radius: var(--radius-xl);
-  background-color: rgba(24, 34, 53, 0.4);
+  background-color: var(--dropzone-bg);
   padding: 2.5rem 1.5rem;
   text-align: center;
   cursor: pointer;
@@ -745,8 +755,8 @@ input[type="range"]:active::-webkit-slider-thumb {
 }
 
 .dropzone:hover, .dropzone.dragover {
-  border-color: var(--accent-emerald);
-  background-color: rgba(16, 185, 129, 0.05);
+  border-color: var(--dropzone-hover-border);
+  background-color: var(--dropzone-hover-bg);
   transform: translateY(-2px);
 }
 
@@ -758,7 +768,7 @@ input[type="range"]:active::-webkit-slider-thumb {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background-color: var(--bg-card);
+  background-color: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
