@@ -135,6 +135,22 @@
     setTheme(initialTheme);
   }
 
+  function updateDropzoneThemeStyles(isHovered = false) {
+    if (!dropzone) return;
+    if (state.settings.theme === 'light') {
+      if (isHovered) {
+        dropzone.style.setProperty('background-color', '#e2e8f0', 'important');
+        dropzone.style.setProperty('border-color', '#10b981', 'important');
+      } else {
+        dropzone.style.setProperty('background-color', '#ffffff', 'important');
+        dropzone.style.setProperty('border-color', '#cbd5e1', 'important');
+      }
+    } else {
+      dropzone.style.removeProperty('background-color');
+      dropzone.style.removeProperty('border-color');
+    }
+  }
+
   function setTheme(theme) {
     state.settings.theme = theme;
     htmlRoot.setAttribute('data-theme', theme);
@@ -147,6 +163,8 @@
       themeIconDark.style.display = 'none';
       themeIconLight.style.display = 'block';
     }
+
+    updateDropzoneThemeStyles(false);
   }
 
   function initPWA() {
@@ -1244,14 +1262,19 @@
       e.preventDefault();
       e.stopPropagation();
       dropzone.classList.add('dragover');
+      updateDropzoneThemeStyles(true);
     });
   });
+
+  dropzone.addEventListener('mouseenter', () => updateDropzoneThemeStyles(true));
+  dropzone.addEventListener('mouseleave', () => updateDropzoneThemeStyles(false));
 
   ['dragleave', 'drop'].forEach((eventName) => {
     dropzone.addEventListener(eventName, (e) => {
       e.preventDefault();
       e.stopPropagation();
       dropzone.classList.remove('dragover');
+      updateDropzoneThemeStyles(false);
     });
   });
 
