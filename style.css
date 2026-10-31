@@ -760,6 +760,23 @@ input[type="range"]:active::-webkit-slider-thumb {
   transform: translateY(-2px);
 }
 
+/* Light Mode Explicit Dropzone Inversion */
+[data-theme="light"] .dropzone {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .dropzone:hover,
+[data-theme="light"] .dropzone.dragover {
+  background-color: #e2e8f0 !important;
+  border-color: #10b981 !important;
+}
+
+[data-theme="light"] .dropzone-icon {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
 .file-input-hidden {
   display: none;
 }
