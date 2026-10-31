@@ -2,12 +2,12 @@
  * OptiPic Service Worker — Offline Support & Asset Caching
  */
 
-const CACHE_NAME = 'optipic-v2.1';
+const CACHE_NAME = 'optipic-v2.2';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css?v=2.1',
-  './app.js?v=2.1',
+  './style.css?v=2.2',
+  './app.js?v=2.2',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

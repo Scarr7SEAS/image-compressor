@@ -1393,4 +1393,20 @@
   // Init
   initTheme();
   initPWA();
+
+  // Sembunyikan dan hapus paksa Netlify Drawer & HUD widget jika diinjeksikan
+  const removeNetlifyWidgets = () => {
+    const selectors = [
+      '#nl-badge-frame', '#nl-hud-frame', 'netlify-drawer', '#netlify-drawer',
+      '.netlify-drawer', '[data-netlify-drawer]', 'div[class*="netlify-drawer"]',
+      'iframe[src*="netlify"]', 'iframe[title*="Netlify"]', 'iframe[title*="Powered by Netlify"]',
+      'div[id*="netlify-feedback"]', 'div[class*="netlify-feedback"]',
+      '.feedback-widget', '[aria-label="Netlify Drawer"]'
+    ];
+    selectors.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => el.remove());
+    });
+  };
+  removeNetlifyWidgets();
+  setInterval(removeNetlifyWidgets, 400);
 })();

@@ -1681,3 +1681,35 @@ input[type="range"]:active::-webkit-slider-thumb {
     display: none !important; /* Di desktop selalu sembunyikan sticky bar bawah */
   }
 }
+
+/* ==========================================================================
+   Sembunyikan Paksa Watermark / Widget Netlify Drawer & HUD Badge
+   ========================================================================== */
+#nl-badge-frame,
+#nl-hud-frame,
+iframe[id*="nl-"],
+iframe[title*="Netlify"],
+iframe[title*="Powered by Netlify"],
+netlify-drawer,
+#netlify-drawer,
+.netlify-drawer,
+[data-netlify-drawer],
+div[class*="netlify-drawer"],
+iframe[src*="netlify"],
+div[id*="netlify-feedback"],
+div[class*="netlify-feedback"],
+.feedback-widget,
+[aria-label="Netlify Drawer"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  clip-path: path("M0 0Z") !important;
+  transform: scale(0) !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  z-index: -99999 !important;
+}

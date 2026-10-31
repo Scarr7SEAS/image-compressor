@@ -9,7 +9,30 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=2.1">
+  <link rel="stylesheet" href="style.css?v=2.2">
+  <script>
+    /* Netlify HUD & Badge Neutralizer */
+    (function () {
+      function killNetlifyHUD() {
+        const hudScripts = document.querySelectorAll('script[src*="hud"], script[data-nf-variant]');
+        hudScripts.forEach(function (s) {
+          s.removeAttribute('data-nf-variant');
+          if (s.dataset) delete s.dataset.nfVariant;
+          s.remove();
+        });
+        const badFrames = document.querySelectorAll('#nl-badge-frame, #nl-hud-frame, iframe[id*="nl-"], iframe[title*="Netlify"], iframe[title*="Powered by Netlify"]');
+        badFrames.forEach(function (f) {
+          f.remove();
+        });
+      }
+      try {
+        new MutationObserver(killNetlifyHUD).observe(document.documentElement, { childList: true, subtree: true });
+      } catch (e) {}
+      window.addEventListener('DOMContentLoaded', killNetlifyHUD);
+      window.addEventListener('load', killNetlifyHUD);
+      setInterval(killNetlifyHUD, 150);
+    })();
+  </script>
   <style>
     /* Enforce Dropzone Light Mode Inversion (Zero-Cache Guarantee) */
     [data-theme="light"] .dropzone {
@@ -24,6 +47,36 @@
     [data-theme="light"] .dropzone-icon {
       background-color: #f1f5f9 !important;
       border-color: #e2e8f0 !important;
+    }
+
+    /* Sembunyikan Paksa Watermark / Widget Netlify Drawer & HUD */
+    #nl-badge-frame,
+    #nl-hud-frame,
+    iframe[id*="nl-"],
+    iframe[title*="Netlify"],
+    iframe[title*="Powered by Netlify"],
+    netlify-drawer,
+    #netlify-drawer,
+    .netlify-drawer,
+    [data-netlify-drawer],
+    div[class*="netlify-drawer"],
+    iframe[src*="netlify"],
+    div[id*="netlify-feedback"],
+    div[class*="netlify-feedback"],
+    .feedback-widget,
+    [aria-label="Netlify Drawer"] {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      visibility: hidden !important;
+      width: 0 !important;
+      height: 0 !important;
+      clip-path: path("M0 0Z") !important;
+      transform: scale(0) !important;
+      position: absolute !important;
+      top: -9999px !important;
+      left: -9999px !important;
+      z-index: -99999 !important;
     }
   </style>
   <!-- JSZip untuk fitur Download Semua ZIP (Offline-ready) -->
@@ -518,6 +571,6 @@
     </footer>
   </div>
 
-  <script src="app.js?v=2.1"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>
